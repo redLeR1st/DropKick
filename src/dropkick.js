@@ -86,7 +86,16 @@ class Dropkick {
     this.data = {};
     this.data.select = sel;
     this.data.elem = dk.elem;
+    this.data.optList = dk.optList;
     this.data.settings = _.extend({}, defaults, opts );
+    this.funcs = {};
+    this.funcs.close = this.close;
+    
+    var self = this;
+    //$(this.data.optList).on('click keydown keypress mouseover reset change', this.handleEvent.apply(this)); 
+    $(this.data.optList).on('click keydown keypress mouseover reset change', function (e) {
+        self.handleEvent(e);
+    }); 
 
     // Emulate some of HTMLSelectElement's properties
 
@@ -288,7 +297,7 @@ class Dropkick {
         before.parentNode.insertBefore( option, before );
         this.options.splice( i, 0, option );
       } else {
-        this.data.elem.lastChild.appendChild( option );
+        this.data.optList.appendChild( option );
         this.options.push( option );
       }
 
@@ -346,7 +355,8 @@ class Dropkick {
    */
   close() {
     var i,
-        dk = this.data.elem;
+        dk = this.data.elem,
+        dkOptsList = this.data.optList;
 
     if ( !this.isOpen || this.multiple ) {
       return false;
@@ -356,11 +366,11 @@ class Dropkick {
       _.removeClass( this.options[ i ], "dk-option-highlight" );
     }
 
-    dk.lastChild.setAttribute( "aria-expanded", "false" );
-    _.removeClass( dk.lastChild, "dk-select-options-highlight" );
+    dkOptsList.setAttribute( "aria-expanded", "false" );
+    _.removeClass( dkOptsList, "dk-select-options-highlight" );
     _.removeClass( dk, "dk-select-open-(up|down)" );
     this.isOpen = false;
-
+    $(dk).append(dkOptsList);
     this.data.settings.close.call( this );
   }
 
@@ -379,7 +389,7 @@ class Dropkick {
   open() {
     let dropHeight, above, below, direction, dkTop, dkBottom;
     let dk = this.data.elem;
-    let dkOptsList = dk.lastChild;
+    let dkOptsList = this.data.optList;
     // Using MDNs suggestion for crossbrowser scrollY:
     // https://developer.mozilla.org/en-US/docs/Web/API/Window/scrollY
     let supportPageOffset = window.pageXOffset !== undefined;
@@ -402,6 +412,15 @@ class Dropkick {
     this.isOpen = true;
     _.addClass( dk, "dk-select-open" + direction );
     dkOptsList.setAttribute( "aria-expanded", "true" );
+       $(dkOptsList).css({
+        zIndex: 7001,
+        position: 'absolute',
+        width: parseInt($($(this.data.elem)[0].parentNode).css('width')) - 2 + 'px',
+        left: $($(this.data.elem)[0].parentNode).offset().left,
+        top: $($(this.data.elem)[0].parentNode).offset().top + $($(this.data.elem)[0].parentNode).height(),
+    });
+    
+    $('#theBody').append(dkOptsList);
     this._scrollTo( this.options.length - 1 );
     this._scrollTo( this.selectedIndex );
 
@@ -847,7 +866,7 @@ class Dropkick {
         _.removeClass( this.options[ i ], "dk-option-highlight" );
       }
 
-      _.addClass( this.data.elem.lastChild, "dk-select-options-highlight" );
+      _.addClass( this.data.optList, "dk-select-options-highlight" );
       _.addClass( option, "dk-option-highlight" );
     }
   }
@@ -878,8 +897,8 @@ class Dropkick {
       event.preventDefault();
       lastSelected = selected[ selected.length - 1 ];
 
-      if ( _.hasClass( this.data.elem.lastChild, "dk-select-options-highlight" ) ) {
-        _.removeClass( this.data.elem.lastChild, "dk-select-options-highlight" );
+      if ( _.hasClass( this.data.optList, "dk-select-options-highlight" ) ) {
+        _.removeClass( this.data.optList, "dk-select-options-highlight" );
         for ( j = 0; j < options.length; j++ ) {
           if ( _.hasClass( options[ j ], "dk-option-highlight" ) ) {
             _.removeClass( options[ j ], "dk-option-highlight" );
@@ -967,7 +986,7 @@ class Dropkick {
    */
   _scrollTo( option ) {
     var optPos, optTop, optBottom,
-        dkOpts = this.data.elem.lastChild;
+        dkOpts = this.data.optList;
 
     if ( option === -1 || ( typeof option !== "number" && !option ) ||
          ( !this.isOpen && !this.multiple ) ) {
@@ -1016,6 +1035,7 @@ Dropkick.build = function( sel, idpre ) {
 
       ret = {
         elem: null,
+        optList: null,
         options: [],
         selected: []
       },
@@ -1123,7 +1143,9 @@ Dropkick.build = function( sel, idpre ) {
 
   for ( i = sel.children.length; i--; options.unshift( sel.children[ i ] ) );
   options.forEach( addOption, ret.elem.appendChild( optList ) );
-
+  
+  ret.optList = optList;
+  
   return ret;
 };
 
